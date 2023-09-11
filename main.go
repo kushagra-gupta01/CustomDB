@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"github.com/jcelliott/lumber"
 )
@@ -32,24 +33,83 @@ type Options struct{
 	Logger
 }
 
-func New()(){
+func New(dir string,options *Options)(*Driver, error){
+	dir = filepath.Clean(dir)
+
+	opts := Options{} 
+
+	if opts.Logger == nil{
+		opts.Logger = lumber.NewConsoleLogger((lumber.INFO))
+	}
+
+	driver := Driver{
+		dir: dir,
+		mutexes: make(map[string]*sync.Mutex),
+		log: opts.Logger,
+	}
+
+	if _,err := os.stat(dir);err==nil{
+		opts.Logger.Debug("Using %s (database already exists)\n",dir)
+		return &driver,nil
+	}
+
+	opts.Logger.Debug("Creating the database at %s...\n ",dir)
+	return &driver,os.MkdirAll(dir,755)
+}
+
+func (d *Driver)Write(collection,resource string,v interface{}) error{
+	if collection == ""{
+		return fmt.Errorf("Missing collection no place to save records")
+	}
+
+	if resource == ""{
+		return fmt.Errorf("Missing resource - unable to save record(no name)!")
+	}
+
+	mutex := d.getOrCreateMutex(collection)
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	dir := filepath.Join(d.dir,collection)
+	fntPath := filepath.Join(dir,resource+"json")
+	tmpPath := fntPath +".tmp"
+
+	if err := os.MkdirAll(dir,755);err!=nil{
+		return err
+	}
+
+	b,err := json.MarshalIndent(v,"","\t")
+	if err!=nil{
+		return err
+	}
+	b = append(b,byte('\n'))
+
+	if err := os.(tmpPath,b,644);err!=nil{
+		return err
+	}
+}
+
+func (d *Driver)Read() error{
 
 }
 
-func Write() error{
+func (d *Driver)ReadAll()(){
 
 }
 
-func Read() error{
+func (d *Driver)Delete() error{
 
 }
 
-func ReadAll()(){
-
+func getOrCreateMutex(collection string) *sync.Mutex{
+	
 }
 
-func Delete() error{
-
+func stat(path string)(fi os.FileInfo,err error){
+	if fi,err = os.Stat(path);os.IsNotExist(err){
+		fi,err = os.Stat(path+".json")
+	}
+	return
 }
 
 type Address struct{
@@ -114,6 +174,6 @@ func main(){
 // 	fmt.Println("Error",err)
 // }
 
-// if err :=db.DeleteALl("user","");err !=nil{
+// if err :=db.Delete("user","");err !=nil{
 // 	fmt.Println("Error",err)
 // }
