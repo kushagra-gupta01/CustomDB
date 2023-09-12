@@ -54,16 +54,16 @@ func New(dir string,options *Options)(*Driver, error){
 	}
 
 	opts.Logger.Debug("Creating the database at %s...\n ",dir)
-	return &driver,os.MkdirAll(dir,755)
+	return &driver,os.MkdirAll(dir,0755)
 }
 
 func (d *Driver)Write(collection,resource string,v interface{}) error{
 	if collection == ""{
-		return fmt.Errorf("Missing collection no place to save records")
+		return fmt.Errorf("missing collection no place to save records")
 	}
 
 	if resource == ""{
-		return fmt.Errorf("Missing resource - unable to save record(no name)!")
+		return fmt.Errorf("missing resource - unable to save record(no name)")
 	}
 
 	mutex := d.getOrCreateMutex(collection)
@@ -74,7 +74,7 @@ func (d *Driver)Write(collection,resource string,v interface{}) error{
 	fntPath := filepath.Join(dir,resource+".json")
 	tmpPath := fntPath +".tmp"
 
-	if err := os.MkdirAll(dir,755);err!=nil{
+	if err := os.MkdirAll(dir,0755);err!=nil{
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (d *Driver)Write(collection,resource string,v interface{}) error{
 	}
 	b = append(b,byte('\n'))
 
-	if err := os.WriteFile(tmpPath,b,644);err!=nil{
+	if err := os.WriteFile(tmpPath,b,0644);err!=nil{
 		return err
 	}
 	return os.Rename(tmpPath,fntPath)
@@ -92,10 +92,10 @@ func (d *Driver)Write(collection,resource string,v interface{}) error{
 
 func (d *Driver)Read(collection,resource string,v interface{}) error{
 	if collection ==""{
-		fmt.Errorf("Missing collection:No place to read records")
+		return fmt.Errorf("missing collection:No place to read records")
 	}
 	if resource == ""{
-		fmt.Errorf("Missing resource: Unable to save record(no name)")
+		return fmt.Errorf("missing resource: Unable to save record(no name)")
 	}
 
 	record:=filepath.Join(d.dir,collection,resource)
@@ -113,7 +113,7 @@ func (d *Driver)Read(collection,resource string,v interface{}) error{
 
 func (d *Driver)ReadAll(collection string)([]string,error){
 	if collection == ""{
-		return nil,fmt.Errorf("Missing collection: No place to read records")
+		return nil,fmt.Errorf("missing collection: No place to read records")
 	}
 	dir := filepath.Join(d.dir,collection)
 
@@ -144,7 +144,7 @@ func (d *Driver)Delete(collection,resource string) error{
 	
 	switch fi,err := stat(dir); {
 	case fi == nil,err!=nil:
-		return fmt.Errorf("Unable to find file or directory named %v\n",path)
+		return fmt.Errorf("unable to find file or directory named %v",path)
 
 	case fi.Mode().IsDir():
 		return os.RemoveAll(dir)
